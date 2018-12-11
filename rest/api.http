@@ -1,0 +1,31 @@
+@host = localhost:8080
+@owner = ow1
+
+### Ping
+GET http://{{host}}/ping
+
+### 
+GET http://{{host}}/api/v1
+X-Toggly-Request-Id: 123456789
+X-Toggly-Owner-Id: {{owner}}
+
+### 
+GET http://{{host}}/api/v1/nf
+# X-Toggly-Request-Id: 123456789
+X-Toggly-Owner-Id: {{owner}}
+
+
+
+### 
+POST http://{{host}}/api/v1
+X-Toggly-Request-Id: 123456789
+X-Toggly-Owner-Id: {{owner}}
+
+{
+    "a": 1
+}
+
+### Projects list
+GET http://{{host}}/api/v1/project
+X-Toggly-Request-Id: 123456789
+X-Toggly-Owner-Id: {{owner}}

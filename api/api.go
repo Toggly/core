@@ -19,4 +19,5 @@ type ProjectAPI interface {
 	Create(info *ProjectInfo) (*domain.Project, error)
 	Update(info *ProjectInfo) (*domain.Project, error)
 	Delete(code string) error
+	Some()
 }
