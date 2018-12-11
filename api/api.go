@@ -3,7 +3,14 @@ package api
 import "github.com/Toggly/core/domain"
 
 // TogglyAPI interface
-type TogglyAPI interface{}
+type TogglyAPI interface {
+	ForOwner(owner string) OwnerAPI
+}
+
+// OwnerAPI interface
+type OwnerAPI interface {
+	Projects() ProjectAPI
+}
 
 // ProjectInfo type
 type ProjectInfo struct {
@@ -19,5 +26,5 @@ type ProjectAPI interface {
 	Create(info *ProjectInfo) (*domain.Project, error)
 	Update(info *ProjectInfo) (*domain.Project, error)
 	Delete(code string) error
-	Some()
+	// For(code domain.ProjectCode) ForProjectAPI
 }

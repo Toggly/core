@@ -87,11 +87,9 @@ func main() {
 		logger.Fatal().Err(err).Msg("Can't open storage connection")
 	}
 
-	dataStorage.ForOwner("ow1").Projects().List()
-
 	server := &rest.Server{
 		Version:  version,
-		API:      engine.NewTogglyAPI(dataStorage),
+		API:      engine.NewTogglyAPI(dataStorage, logger),
 		Logger:   logger,
 		LogLevel: logLevel,
 	}

@@ -20,6 +20,8 @@ func (e *UniqueIndexError) Error() string {
 var (
 	// ErrNotFound error
 	ErrNotFound = errors.New("not found")
+	// ErrEntityRelationsBroken error
+	ErrEntityRelationsBroken = errors.New("entity relations broken")
 )
 
 // DataStorage defines storage interface

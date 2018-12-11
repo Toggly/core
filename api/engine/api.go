@@ -3,31 +3,40 @@ package engine
 import (
 	"github.com/Toggly/core/api"
 	"github.com/Toggly/core/storage"
+	"github.com/rs/zerolog"
 )
 
 // NewTogglyAPI returns api engine
-func NewTogglyAPI(storage storage.DataStorage) api.TogglyAPI {
-	return &Engine{}
-	// return &Engine{Storage: storage}
+func NewTogglyAPI(storage storage.DataStorage, log zerolog.Logger) api.TogglyAPI {
+	return &Engine{
+		storage: storage,
+		log:     log,
+	}
 }
 
 // Engine type
 type Engine struct {
-	// Storage *storage.DataStorage
+	storage storage.DataStorage
+	log     zerolog.Logger
 }
 
-// // ForOwner returns owner api
-// func (e *Engine) ForOwner(owner string) api.OwnerAPI {
-// 	return &OwnerAPI{Owner: owner, Storage: e.Storage}
-// }
+// ForOwner returns owner api
+func (e *Engine) ForOwner(owner string) api.OwnerAPI {
+	return &OwnerAPI{
+		owner:   owner,
+		storage: e.storage,
+		log:     e.log,
+	}
+}
 
-// // OwnerAPI type
-// type OwnerAPI struct {
-// 	Owner   string
-// 	Storage *storage.DataStorage
-// }
+// OwnerAPI type
+type OwnerAPI struct {
+	owner   string
+	storage storage.DataStorage
+	log     zerolog.Logger
+}
 
-// // Projects returns project api
-// func (o *OwnerAPI) Projects() api.ProjectAPI {
-// 	return &ProjectAPI{*o}
-// }
+// Projects returns project api
+func (o *OwnerAPI) Projects() api.ProjectAPI {
+	return &ProjectAPI{*o}
+}
