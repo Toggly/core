@@ -7,13 +7,13 @@ import (
 	"github.com/Toggly/core/domain"
 )
 
-// UniqueIndexError type
-type UniqueIndexError struct {
+// ErrUniqueIndex type
+type ErrUniqueIndex struct {
 	Type string
 	Key  string
 }
 
-func (e *UniqueIndexError) Error() string {
+func (e *ErrUniqueIndex) Error() string {
 	return fmt.Sprintf("Unique index error: %s [%s]", e.Type, e.Key)
 }
 

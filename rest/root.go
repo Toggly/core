@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,8 +10,14 @@ import (
 	"github.com/Toggly/core/api"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"github.com/rs/zerolog"
+)
+
+var (
+	// ErrProjectNotFound error
+	ErrProjectNotFound = errors.New("Project not found")
+	// ErrProjectNotEmpty error
+	ErrProjectNotEmpty = errors.New("Project not empty")
 )
 
 // Server implements rest server
@@ -18,12 +25,13 @@ type Server struct {
 	Version  string
 	API      api.TogglyAPI
 	BasePath string
-	Logger   zerolog.Logger
+	Log      zerolog.Logger
 	LogLevel zerolog.Level
 }
 
 // Run rest api
 func (s *Server) Run(ctx context.Context, port int, basePath string) {
+	log := s.Log
 	routes := s.Router(basePath)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
@@ -32,13 +40,13 @@ func (s *Server) Run(ctx context.Context, port int, basePath string) {
 	go func() {
 		<-ctx.Done()
 		if err := srv.Shutdown(ctx); err != nil {
-			s.Logger.Error().Err(err).Msg("REST stop error")
+			log.Error().Err(err).Msg("REST stop error")
 		}
-		s.Logger.Info().Msg("REST server stopped")
+		log.Info().Msg("REST server stopped")
 	}()
-	s.Logger.Info().Str("addr", srv.Addr).Msg("HTTP server listening")
+	log.Info().Str("addr", srv.Addr).Msg("HTTP server listening")
 	err := srv.ListenAndServe()
-	s.Logger.Info().Msgf("HTTP server terminated, %s", err)
+	log.Info().Msgf("HTTP server terminated, %s", err)
 }
 
 // Router returns router
@@ -59,20 +67,19 @@ func (s *Server) versions(router chi.Router) {
 }
 
 func (s *Server) v1(router chi.Router) {
-	router.Use(RequestIDCtx(s.Logger))
-	router.Use(Logger(s.Logger, s.LogLevel))
-	router.Use(OwnerCtx(s.Logger))
+	router.Use(RequestIDCtx(s.Log))
+	router.Use(Logger(s.Log, s.LogLevel))
+	router.Use(OwnerCtx(s.Log))
 	router.Use(VersionCtx("v1"))
-	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		log := WithRequest(s.Logger, r)
-		log.Info().Msg("Some log text")
-		render.PlainText(w, r, "hello")
-	})
-	router.Get("/nf", func(w http.ResponseWriter, r *http.Request) {
-		// log := WithRequest(s.Logger, r)
-		NotFoundResponse(w, r, "Did not found that")
-	})
-	// router.Mount("/project", (&ProjectRestAPI{API: s.API}).Routes())
+	// router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	log := WithRequest(s.Log, r)
+	// 	log.Info().Msg("Some log text")
+	// 	render.PlainText(w, r, "hello")
+	// })
+	// router.Get("/nf", func(w http.ResponseWriter, r *http.Request) {
+	// 	NotFoundResponse(w, r, "Did not found that")
+	// })
+	router.Mount("/project", (&projectRestAPI{API: s.API, Log: s.Log, LogLevel: s.LogLevel}).Routes())
 	// router.Mount("/project/{project_code}/env", (&EnvironmentRestAPI{API: s.API}).Routes())
 	// router.Mount("/project/{project_code}/env/{env_code}/object", (&ObjectRestAPI{API: s.API}).Routes())
 }

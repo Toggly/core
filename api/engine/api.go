@@ -8,35 +8,31 @@ import (
 
 // NewTogglyAPI returns api engine
 func NewTogglyAPI(storage storage.DataStorage, log zerolog.Logger) api.TogglyAPI {
-	return &Engine{
+	return &engine{
 		storage: storage,
 		log:     log,
 	}
 }
 
-// Engine type
-type Engine struct {
+type engine struct {
 	storage storage.DataStorage
 	log     zerolog.Logger
 }
 
-// ForOwner returns owner api
-func (e *Engine) ForOwner(owner string) api.OwnerAPI {
-	return &OwnerAPI{
+func (e *engine) ForOwner(owner string) api.OwnerAPI {
+	return &ownerAPI{
 		owner:   owner,
 		storage: e.storage,
 		log:     e.log,
 	}
 }
 
-// OwnerAPI type
-type OwnerAPI struct {
+type ownerAPI struct {
 	owner   string
 	storage storage.DataStorage
 	log     zerolog.Logger
 }
 
-// Projects returns project api
-func (o *OwnerAPI) Projects() api.ProjectAPI {
-	return &ProjectAPI{*o}
+func (o *ownerAPI) Projects() api.ProjectAPI {
+	return &projectAPI{*o}
 }

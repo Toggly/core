@@ -90,7 +90,7 @@ func main() {
 	server := &rest.Server{
 		Version:  version,
 		API:      engine.NewTogglyAPI(dataStorage, logger),
-		Logger:   logger,
+		Log:      logger,
 		LogLevel: logLevel,
 	}
 

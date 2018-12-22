@@ -7,7 +7,6 @@ import (
 	"github.com/Toggly/core/domain"
 
 	"github.com/Toggly/core/api"
-	"github.com/Toggly/core/storage"
 
 	"github.com/Toggly/core/api/engine"
 	asserts "github.com/stretchr/testify/assert"
@@ -24,7 +23,7 @@ func TestAPIProject(t *testing.T) {
 	t.Run("get not found", func(t *testing.T) {
 		proj, err := pApi.Get("proj1")
 		assert.Nil(proj)
-		assert.Equal(storage.ErrNotFound, err)
+		assert.Equal(api.ErrProjectNotFound, err)
 	})
 
 	t.Run("list empty", func(t *testing.T) {
@@ -34,6 +33,22 @@ func TestAPIProject(t *testing.T) {
 	})
 
 	var regDate time.Time
+
+	t.Run("bad request", func(t *testing.T) {
+		tt := []*api.ProjectInfo{
+			&api.ProjectInfo{},
+			&api.ProjectInfo{Code: "p1", Status: "wrong"},
+		}
+		var err error
+		for _, tc := range tt {
+			_, err = pApi.Create(tc)
+			_, ok := err.(*api.ErrBadRequest)
+			assert.True(ok)
+			_, err = pApi.Update(tc)
+			_, ok = err.(*api.ErrBadRequest)
+			assert.True(ok)
+		}
+	})
 
 	t.Run("create", func(t *testing.T) {
 		p := &api.ProjectInfo{
@@ -78,7 +93,7 @@ func TestAPIProject(t *testing.T) {
 		err := pApi.Delete("proj1")
 		assert.Nil(err)
 		_, err = pApi.Get("proj1")
-		assert.Equal(storage.ErrNotFound, err)
+		assert.Equal(api.ErrProjectNotFound, err)
 	})
 
 	afterTest()

@@ -51,3 +51,19 @@ func (s *mongoStorage) ForOwner(owner string) storage.OwnerStorage {
 		db:    s.db,
 	}
 }
+
+type mongoOwnerStorage struct {
+	log   zerolog.Logger
+	owner string
+	ctx   context.Context
+	db    *mongo.Database
+}
+
+func (s *mongoOwnerStorage) Projects() storage.ProjectStorage {
+	return &mongoProjectStorage{
+		log:   s.log,
+		owner: s.owner,
+		ctx:   s.ctx,
+		db:    s.db,
+	}
+}

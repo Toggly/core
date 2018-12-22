@@ -14,22 +14,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type mongoOwnerStorage struct {
-	log   zerolog.Logger
-	owner string
-	ctx   context.Context
-	db    *mongo.Database
-}
-
-func (s *mongoOwnerStorage) Projects() storage.ProjectStorage {
-	return &mongoProjectStorage{
-		log:   s.log,
-		owner: s.owner,
-		ctx:   s.ctx,
-		db:    s.db,
-	}
-}
-
 type mongoProjectStorage struct {
 	log   zerolog.Logger
 	owner string
@@ -112,6 +96,7 @@ func (s *mongoProjectStorage) Save(project *domain.Project) error {
 	s.log.Debug().Str("name", name).Msg("Index created")
 
 	res, err := s.collection().InsertOne(ctxT, project)
+	// TODO: check unique index error
 	s.log.Debug().Str("id", fmt.Sprintf("%v", res.InsertedID)).Msg("Project inserted")
 	return err
 }
@@ -124,5 +109,6 @@ func (s *mongoProjectStorage) Update(project *domain.Project) error {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
 	res := s.collection().FindOneAndReplace(ctxT, bson.M{"owner": s.owner, "code": project.Code}, project)
+	// TODO: check not found error
 	return res.Err()
 }
