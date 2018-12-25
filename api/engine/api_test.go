@@ -12,34 +12,38 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.Output(zerolog.ConsoleWriter{
-	Out:     os.Stdout,
-	NoColor: true,
-}).Level(zerolog.DebugLevel)
+func logger() zerolog.Logger {
+	return log.Output(zerolog.ConsoleWriter{
+		Out:     os.Stdout,
+		NoColor: true,
+	})
+}
 
 func getDB() storage.DataStorage {
+	log := logger()
 	ctx := context.Background()
-	dataStorage, err := mongo.NewMongoDataStorage(ctx, "mongodb://localhost:27017", "toggly_api_test", logger)
+	dataStorage, err := mongo.NewMongoDataStorage(ctx, "mongodb://localhost:27017", "toggly_api_test", log)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Can't create storage")
+		log.Fatal().Err(err).Msg("Can't create storage")
 	}
 	err = dataStorage.Connect()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Can't connect")
+		log.Fatal().Err(err).Msg("Can't connect")
 	}
 	return dataStorage
 }
 
 func dropDB() {
+	log := logger()
 	client, err := driver.NewClient("mongodb://localhost:27017")
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Can't connect to mongo")
+		log.Fatal().Err(err).Msg("Can't connect to mongo")
 	}
 	ctx := context.Background()
 	client.Connect(ctx)
 	err = client.Database("toggly_api_test").Drop(ctx)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Can't drop db")
+		log.Fatal().Err(err).Msg("Can't drop db")
 	}
 }
 

@@ -15,7 +15,7 @@ import (
 func TestAPIProject(t *testing.T) {
 
 	assert := asserts.New(t)
-	e := engine.NewTogglyAPI(getDB(), logger)
+	e := &engine.APIEngine{Storage: getDB(), Log: logger()}
 	pApi := e.ForOwner("ow1").Projects()
 
 	beforeTest()

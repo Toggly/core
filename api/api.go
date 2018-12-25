@@ -65,6 +65,7 @@ type EnvironmentAPI interface {
 	Create(info *EnvironmentInfo) (*domain.Environment, error)
 	Update(info *EnvironmentInfo) (*domain.Environment, error)
 	Delete(code string) error
+	For(code string) ForEnvironmentAPI
 }
 
 // ForEnvironmentAPI interface
@@ -95,7 +96,7 @@ type ParameterInfo struct{}
 // ParameterAPI interface
 type ParameterAPI interface {
 	List() ([]*domain.Parameter, error)
-	Get(code string) ([]*domain.Parameter, error)
+	Get(code string) (*domain.Parameter, error)
 	GetBatch(code ...string) ([]*domain.Parameter, error)
 	Create(param *ParameterInfo) (domain.Parameter, error)
 	Update(param *ParameterInfo) (domain.Parameter, error)

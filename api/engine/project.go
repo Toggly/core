@@ -9,19 +9,20 @@ import (
 	"github.com/Toggly/core/util"
 )
 
-type projectAPI struct {
-	ownerAPI
+// ProjectAPI type
+type ProjectAPI struct {
+	OwnerAPI
 }
 
-func (a *projectAPI) s() storage.ProjectStorage {
+func (a *ProjectAPI) s() storage.ProjectStorage {
 	return a.storage.ForOwner(a.owner).Projects()
 }
 
-func (a *projectAPI) List() ([]*domain.Project, error) {
+func (a *ProjectAPI) List() ([]*domain.Project, error) {
 	return a.s().List()
 }
 
-func (a *projectAPI) Get(code string) (*domain.Project, error) {
+func (a *ProjectAPI) Get(code string) (*domain.Project, error) {
 	p, err := a.s().Get(code)
 	if err == storage.ErrNotFound {
 		return nil, api.ErrProjectNotFound
@@ -43,7 +44,7 @@ func checkProjectParams(code, description, status string) error {
 	return nil
 }
 
-func (a *projectAPI) Create(info *api.ProjectInfo) (*domain.Project, error) {
+func (a *ProjectAPI) Create(info *api.ProjectInfo) (*domain.Project, error) {
 	if err := checkProjectParams(info.Code, info.Description, info.Status); err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func (a *projectAPI) Create(info *api.ProjectInfo) (*domain.Project, error) {
 	return newProj, nil
 }
 
-func (a *projectAPI) Update(info *api.ProjectInfo) (*domain.Project, error) {
+func (a *ProjectAPI) Update(info *api.ProjectInfo) (*domain.Project, error) {
 	if err := checkProjectParams(info.Code, info.Description, info.Status); err != nil {
 		return nil, err
 	}
@@ -83,11 +84,11 @@ func (a *projectAPI) Update(info *api.ProjectInfo) (*domain.Project, error) {
 	return newProj, nil
 }
 
-func (a *projectAPI) Delete(code string) error {
+func (a *ProjectAPI) Delete(code string) error {
 	return a.s().Delete(code)
 }
 
-func (a *projectAPI) For(code string) api.ForProjectAPI {
+func (a *ProjectAPI) For(code string) api.ForProjectAPI {
 	return &forProjectAPI{}
 }
 

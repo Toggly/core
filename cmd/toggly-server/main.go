@@ -1,3 +1,4 @@
+// Toggly Server
 package main
 
 import (
@@ -11,7 +12,7 @@ import (
 	"github.com/Toggly/core/api/engine"
 	"github.com/Toggly/core/rest"
 	"github.com/Toggly/core/storage/mongo"
-	"github.com/jessevdk/go-flags"
+	flags "github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -64,7 +65,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	logger := log.Output(zerolog.ConsoleWriter{
+	log := log.Output(zerolog.ConsoleWriter{
 		Out:        os.Stdout,
 		TimeFormat: time.RFC3339,
 	})
@@ -73,28 +74,28 @@ func main() {
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 		<-stop
-		logger.Warn().Msg("Interrupt signal")
+		log.Warn().Msg("Interrupt signal")
 		cancel()
 	}()
 
-	dataStorage, err := mongo.NewMongoDataStorage(ctx, opts.StoreMongoURL, opts.StoreMongoDB, logger)
+	dataStorage, err := mongo.NewMongoDataStorage(ctx, opts.StoreMongoURL, opts.StoreMongoDB, log)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Can't create mongo client")
+		log.Fatal().Err(err).Msg("Can't create mongo client")
 	}
 
 	err = dataStorage.Connect()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Can't open storage connection")
+		log.Fatal().Err(err).Msg("Can't open storage connection")
 	}
 
 	server := &rest.Server{
 		Version:  version,
-		API:      engine.NewTogglyAPI(dataStorage, logger),
-		Log:      logger,
+		API:      &engine.APIEngine{Storage: dataStorage, Log: log},
+		Log:      log,
 		LogLevel: logLevel,
 	}
 
-	logger.Info().Msg("API server started")
+	log.Info().Msg("API server started")
 	server.Run(ctx, opts.Port, opts.BasePath)
-	logger.Warn().Msg("Application terminated")
+	log.Warn().Msg("Application terminated")
 }

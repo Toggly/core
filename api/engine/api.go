@@ -6,33 +6,29 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// NewTogglyAPI returns api engine
-func NewTogglyAPI(storage storage.DataStorage, log zerolog.Logger) api.TogglyAPI {
-	return &engine{
-		storage: storage,
-		log:     log,
-	}
+// APIEngine type
+type APIEngine struct {
+	Storage storage.DataStorage
+	Log     zerolog.Logger
 }
 
-type engine struct {
-	storage storage.DataStorage
-	log     zerolog.Logger
-}
-
-func (e *engine) ForOwner(owner string) api.OwnerAPI {
-	return &ownerAPI{
+// ForOwner api method
+func (e *APIEngine) ForOwner(owner string) api.OwnerAPI {
+	return &OwnerAPI{
 		owner:   owner,
-		storage: e.storage,
-		log:     e.log,
+		storage: e.Storage,
+		log:     e.Log,
 	}
 }
 
-type ownerAPI struct {
+// OwnerAPI type
+type OwnerAPI struct {
 	owner   string
 	storage storage.DataStorage
 	log     zerolog.Logger
 }
 
-func (o *ownerAPI) Projects() api.ProjectAPI {
-	return &projectAPI{*o}
+// Projects returns project api
+func (o *OwnerAPI) Projects() api.ProjectAPI {
+	return &ProjectAPI{*o}
 }
