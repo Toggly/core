@@ -22,7 +22,7 @@ func logger() zerolog.Logger {
 func getDB() storage.DataStorage {
 	log := logger()
 	ctx := context.Background()
-	dataStorage, err := mongo.NewMongoDataStorage(ctx, "mongodb://localhost:27017", "toggly_api_test", log)
+	dataStorage, err := mongo.NewDataStorage(ctx, "mongodb://localhost:27017", "toggly_api_test", log)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Can't create storage")
 	}

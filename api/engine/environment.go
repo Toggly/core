@@ -6,6 +6,9 @@ import (
 )
 
 type environmentAPI struct {
+	owner   string
+	project string
+	engine  *APIEngine
 }
 
 func (a *environmentAPI) List() ([]*domain.Environment, error) {
@@ -28,6 +31,11 @@ func (a *environmentAPI) Delete(code string) error {
 	return nil
 }
 
-func (a *environmentAPI) For(code string) api.ForEnvironmentAPI {
-	return nil
+func (a *environmentAPI) Parameters(env string) api.ParameterAPI {
+	return &parameterAPI{
+		owner:   a.owner,
+		project: a.project,
+		env:     env,
+		engine:  a.engine,
+	}
 }

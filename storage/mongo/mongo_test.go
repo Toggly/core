@@ -19,7 +19,7 @@ var logger = log.Output(zerolog.ConsoleWriter{
 
 func getDB() storage.DataStorage {
 	ctx := context.Background()
-	dataStorage, err := mongo.NewMongoDataStorage(ctx, "mongodb://localhost:27017", "toggly_storage_test", logger)
+	dataStorage, err := mongo.NewDataStorage(ctx, "mongodb://localhost:27017", "toggly_storage_test", logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Can't create storage")
 	}

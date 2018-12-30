@@ -12,23 +12,29 @@ type APIEngine struct {
 	Log     zerolog.Logger
 }
 
-// ForOwner api method
-func (e *APIEngine) ForOwner(owner string) api.OwnerAPI {
-	return &OwnerAPI{
-		owner:   owner,
-		storage: e.Storage,
-		log:     e.Log,
+// Projects returns project api
+func (a *APIEngine) Projects(owner string) api.ProjectAPI {
+	return &projectAPI{
+		owner:  owner,
+		engine: a,
 	}
 }
 
-// OwnerAPI type
-type OwnerAPI struct {
-	owner   string
-	storage storage.DataStorage
-	log     zerolog.Logger
+// Environments returns environments api
+func (a *APIEngine) Environments(owner, project string) api.EnvironmentAPI {
+	return &environmentAPI{
+		owner:   owner,
+		project: project,
+		engine:  a,
+	}
 }
 
-// Projects returns project api
-func (o *OwnerAPI) Projects() api.ProjectAPI {
-	return &ProjectAPI{*o}
+// Groups returns groups api
+func (a *APIEngine) Groups(owner, project, env string) api.GroupAPI {
+	return &groupAPI{
+		owner:   owner,
+		project: project,
+		env:     env,
+		engine:  a,
+	}
 }

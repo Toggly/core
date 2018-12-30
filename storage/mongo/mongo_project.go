@@ -28,7 +28,7 @@ func (s *mongoProjectStorage) collection() *mongo.Collection {
 func (s *mongoProjectStorage) List() ([]*domain.Project, error) {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-	cur, err := s.collection().Find(ctxT, nil)
+	cur, err := s.collection().Find(ctxT, bson.M{"owner": s.owner})
 	if err != nil {
 		s.log.Error().Err(err).Msg("DB error")
 		return nil, err
@@ -72,14 +72,7 @@ func (s *mongoProjectStorage) Delete(code string) error {
 	return err
 }
 
-func (s *mongoProjectStorage) Save(project *domain.Project) error {
-	if s.owner != project.Owner {
-		s.log.Error().Msgf("Wrong owner. Expected: %s, got: %s", s.owner, project.Owner)
-		return storage.ErrEntityRelationsBroken
-	}
-	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
-	defer cancel()
-
+func (s *mongoProjectStorage) ensureIndex(ctxT context.Context) error {
 	idx := mongo.IndexModel{
 		Keys: []bsonx.Elem{
 			bsonx.Elem{Key: "owner", Value: bsonx.Int32(1)},
@@ -87,28 +80,72 @@ func (s *mongoProjectStorage) Save(project *domain.Project) error {
 		},
 		Options: []bsonx.Elem{bsonx.Elem{Key: "unique", Value: bsonx.Boolean(true)}},
 	}
-
 	name, err := s.collection().Indexes().CreateOne(ctxT, idx)
 	if err != nil {
 		s.log.Error().Err(err).Msg("Can't create index")
 		return err
 	}
 	s.log.Debug().Str("name", name).Msg("Index created")
-
-	res, err := s.collection().InsertOne(ctxT, project)
-	// TODO: check unique index error
-	s.log.Debug().Str("id", fmt.Sprintf("%v", res.InsertedID)).Msg("Project inserted")
-	return err
+	return nil
 }
 
-func (s *mongoProjectStorage) Update(project *domain.Project) error {
+func (s *mongoProjectStorage) checkRelations(project *domain.Project) error {
 	if s.owner != project.Owner {
 		s.log.Error().Msgf("Wrong owner. Expected: %s, got: %s", s.owner, project.Owner)
 		return storage.ErrEntityRelationsBroken
 	}
+	return nil
+}
+
+func (s *mongoProjectStorage) Save(project *domain.Project) error {
+	if err := s.checkRelations(project); err != nil {
+		return err
+	}
+
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
+
+	if err := s.ensureIndex(ctxT); err != nil {
+		return err
+	}
+
+	res, err := s.collection().InsertOne(ctxT, project)
+	if err != nil {
+		s.log.Error().Err(err).Msg("Can't insert project")
+		if e, ok := err.(mongo.WriteErrors); ok && len(e) > 0 {
+			switch e[0].Code {
+			case 11000:
+				return &storage.ErrUniqueIndex{Type: "project", Key: project.Key()}
+			}
+		}
+		return err
+	}
+
+	s.log.Debug().Str("id", fmt.Sprintf("%v %v", res, err)).Msg("Project inserted")
+	return nil
+}
+
+func (s *mongoProjectStorage) Update(project *domain.Project) error {
+	if err := s.checkRelations(project); err != nil {
+		return err
+	}
+
+	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
+	defer cancel()
+
+	if err := s.ensureIndex(ctxT); err != nil {
+		return nil
+	}
+
 	res := s.collection().FindOneAndReplace(ctxT, bson.M{"owner": s.owner, "code": project.Code}, project)
-	// TODO: check not found error
+	var proj domain.Project
+	err := res.Decode(&proj)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return storage.ErrNotFound
+		}
+		s.log.Error().Err(err).Msg("Can't decode project")
+		return err
+	}
 	return res.Err()
 }

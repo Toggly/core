@@ -17,7 +17,7 @@ func TestMongoProject(t *testing.T) {
 
 	var err error
 
-	db := getDB().ForOwner("ow1").Projects()
+	db := getDB().Projects("ow1")
 
 	t.Run("get not found", func(t *testing.T) {
 		proj, err := db.Get("proj1")
@@ -60,6 +60,13 @@ func TestMongoProject(t *testing.T) {
 			assert.Equal(p.Owner, proj.Owner)
 			assert.Equal(p.Status, proj.Status)
 		})
+
+		t.Run("unique index error", func(t *testing.T) {
+			err = db.Save(p)
+			assert.NotNil(err)
+			_, ok := err.(*storage.ErrUniqueIndex)
+			assert.True(ok)
+		})
 	})
 
 	t.Run("list one item", func(t *testing.T) {
@@ -67,6 +74,13 @@ func TestMongoProject(t *testing.T) {
 		assert.Nil(err)
 		assert.NotNil(list)
 		assert.Len(list, 1)
+	})
+
+	t.Run("empty list for owner 2", func(t *testing.T) {
+		list, err := getDB().Projects("ow2").List()
+		assert.Nil(err)
+		assert.NotNil(list)
+		assert.Len(list, 0)
 	})
 
 	t.Run("update", func(t *testing.T) {
@@ -77,6 +91,13 @@ func TestMongoProject(t *testing.T) {
 			Status:      domain.ProjectStatusDisabled,
 			RegDate:     util.Now(),
 		}
+
+		t.Run("not found", func(t *testing.T) {
+			p.Code = "proj3"
+			err = db.Update(p)
+			assert.Equal(storage.ErrNotFound, err)
+			p.Code = "proj1"
+		})
 
 		t.Run("wrong owner", func(t *testing.T) {
 			p.Owner = "ow2"

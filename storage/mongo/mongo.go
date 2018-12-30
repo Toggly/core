@@ -9,8 +9,8 @@ import (
 	"github.com/mongodb/mongo-go-driver/mongo"
 )
 
-// NewMongoDataStorage returns mongo storage implementation
-func NewMongoDataStorage(ctx context.Context, url, dbName string, log zerolog.Logger) (storage.DataStorage, error) {
+// NewDataStorage returns mongo storage implementation
+func NewDataStorage(ctx context.Context, url, dbName string, log zerolog.Logger) (storage.DataStorage, error) {
 	client, err := mongo.NewClient(url)
 	if err != nil {
 		return nil, err
@@ -43,8 +43,8 @@ func (s *mongoStorage) Connect() error {
 	return s.client.Connect(s.ctx)
 }
 
-func (s *mongoStorage) ForOwner(owner string) storage.OwnerStorage {
-	return &mongoOwnerStorage{
+func (s *mongoStorage) Projects(owner string) storage.ProjectStorage {
+	return &mongoProjectStorage{
 		log:   s.log,
 		owner: owner,
 		ctx:   s.ctx,
@@ -52,18 +52,12 @@ func (s *mongoStorage) ForOwner(owner string) storage.OwnerStorage {
 	}
 }
 
-type mongoOwnerStorage struct {
-	log   zerolog.Logger
-	owner string
-	ctx   context.Context
-	db    *mongo.Database
-}
-
-func (s *mongoOwnerStorage) Projects() storage.ProjectStorage {
-	return &mongoProjectStorage{
-		log:   s.log,
-		owner: s.owner,
-		ctx:   s.ctx,
-		db:    s.db,
+func (s *mongoStorage) Environments(owner, project string) storage.EnvironmentStorage {
+	return &mongoEnvironmentStorage{
+		log:     s.log,
+		owner:   owner,
+		project: project,
+		ctx:     s.ctx,
+		db:      s.db,
 	}
 }

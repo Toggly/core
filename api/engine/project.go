@@ -1,28 +1,26 @@
 package engine
 
 import (
-	"fmt"
-
 	"github.com/Toggly/core/api"
 	"github.com/Toggly/core/domain"
 	"github.com/Toggly/core/storage"
 	"github.com/Toggly/core/util"
 )
 
-// ProjectAPI type
-type ProjectAPI struct {
-	OwnerAPI
+type projectAPI struct {
+	owner  string
+	engine *APIEngine
 }
 
-func (a *ProjectAPI) s() storage.ProjectStorage {
-	return a.storage.ForOwner(a.owner).Projects()
+func (a *projectAPI) s() storage.ProjectStorage {
+	return a.engine.Storage.Projects(a.owner)
 }
 
-func (a *ProjectAPI) List() ([]*domain.Project, error) {
+func (a *projectAPI) List() ([]*domain.Project, error) {
 	return a.s().List()
 }
 
-func (a *ProjectAPI) Get(code string) (*domain.Project, error) {
+func (a *projectAPI) Get(code string) (*domain.Project, error) {
 	p, err := a.s().Get(code)
 	if err == storage.ErrNotFound {
 		return nil, api.ErrProjectNotFound
@@ -32,19 +30,15 @@ func (a *ProjectAPI) Get(code string) (*domain.Project, error) {
 
 func checkProjectParams(code, description, status string) error {
 	if code == "" {
-		return &api.ErrBadRequest{
-			Description: "Project code not specified",
-		}
+		return api.NewBadRequest("Project code not specified")
 	}
 	if status != domain.ProjectStatusActive && status != domain.ProjectStatusDisabled {
-		return &api.ErrBadRequest{
-			Description: fmt.Sprintf("Project status can be `%s` or `%s`", domain.ProjectStatusActive, domain.ProjectStatusDisabled),
-		}
+		return api.NewBadRequest("Project status can be `%s` or `%s`", domain.ProjectStatusActive, domain.ProjectStatusDisabled)
 	}
 	return nil
 }
 
-func (a *ProjectAPI) Create(info *api.ProjectInfo) (*domain.Project, error) {
+func (a *projectAPI) Create(info *api.ProjectInfo) (*domain.Project, error) {
 	if err := checkProjectParams(info.Code, info.Description, info.Status); err != nil {
 		return nil, err
 	}
@@ -62,7 +56,7 @@ func (a *ProjectAPI) Create(info *api.ProjectInfo) (*domain.Project, error) {
 	return newProj, nil
 }
 
-func (a *ProjectAPI) Update(info *api.ProjectInfo) (*domain.Project, error) {
+func (a *projectAPI) Update(info *api.ProjectInfo) (*domain.Project, error) {
 	if err := checkProjectParams(info.Code, info.Description, info.Status); err != nil {
 		return nil, err
 	}
@@ -84,16 +78,8 @@ func (a *ProjectAPI) Update(info *api.ProjectInfo) (*domain.Project, error) {
 	return newProj, nil
 }
 
-func (a *ProjectAPI) Delete(code string) error {
+func (a *projectAPI) Delete(code string) error {
+	// TODO: delete default environment
+	// TODO: check if project not empty
 	return a.s().Delete(code)
-}
-
-func (a *ProjectAPI) For(code string) api.ForProjectAPI {
-	return &forProjectAPI{}
-}
-
-type forProjectAPI struct{}
-
-func (a *forProjectAPI) Environments() api.EnvironmentAPI {
-	return &environmentAPI{}
 }

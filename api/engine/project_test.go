@@ -16,7 +16,7 @@ func TestAPIProject(t *testing.T) {
 
 	assert := asserts.New(t)
 	e := &engine.APIEngine{Storage: getDB(), Log: logger()}
-	pApi := e.ForOwner("ow1").Projects()
+	pApi := e.Projects("ow1")
 
 	beforeTest()
 

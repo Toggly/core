@@ -61,6 +61,7 @@ func main() {
 		logLevel = zerolog.DebugLevel
 		log.Logger = log.With().Caller().Logger()
 	}
+
 	zerolog.SetGlobalLevel(logLevel)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -78,7 +79,7 @@ func main() {
 		cancel()
 	}()
 
-	dataStorage, err := mongo.NewMongoDataStorage(ctx, opts.StoreMongoURL, opts.StoreMongoDB, log)
+	dataStorage, err := mongo.NewDataStorage(ctx, opts.StoreMongoURL, opts.StoreMongoDB, log)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Can't create mongo client")
 	}

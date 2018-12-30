@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ProjectStatus enum
 const (
@@ -15,4 +18,9 @@ type Project struct {
 	Status      string    `json:"status"`
 	Description string    `json:"description"`
 	RegDate     time.Time `json:"reg_date" bson:"reg_date"`
+}
+
+// Key returns project full key
+func (p *Project) Key() string {
+	return fmt.Sprintf("owner: %s, project: %s", p.Owner, p.Code)
 }

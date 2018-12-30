@@ -37,7 +37,7 @@ func (a *projectRestAPI) Routes() chi.Router {
 }
 
 func (a *projectRestAPI) engine(r *http.Request) api.ProjectAPI {
-	return a.API.ForOwner(owner(r)).Projects()
+	return a.API.Projects(owner(r))
 }
 
 func (a *projectRestAPI) list(w http.ResponseWriter, r *http.Request) {

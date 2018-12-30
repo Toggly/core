@@ -9,10 +9,10 @@ const (
 
 // Parameter type
 type Parameter struct {
-	Code string `json:"code"`
-	// Project       string        `json:"project"`
-	// Environment   string        `json:"environment"`
-	// Group         string        `json:"group"`
+	Code          string        `json:"code"`
+	Project       string        `json:"project"`
+	Environment   string        `json:"environment"`
+	Group         string        `json:"group"`
 	Description   string        `json:"description"`
 	Type          string        `json:"type"`
 	Value         interface{}   `json:"value"`

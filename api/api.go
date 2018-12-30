@@ -7,6 +7,11 @@ import (
 	"github.com/Toggly/core/domain"
 )
 
+const (
+	// DefaultEnvName created by default with project. Can't be deleted. Automatically deleted with project.
+	DefaultEnvName = "base"
+)
+
 var (
 	// ErrProjectNotFound error
 	ErrProjectNotFound = errors.New("Project not found")
@@ -23,14 +28,16 @@ func (e *ErrBadRequest) Error() string {
 	return fmt.Sprintf("Bad request: %s", e.Description)
 }
 
-// TogglyAPI interface
-type TogglyAPI interface {
-	ForOwner(owner string) OwnerAPI
+// NewBadRequest returns BadRequest object
+func NewBadRequest(format string, a ...interface{}) *ErrBadRequest {
+	return &ErrBadRequest{Description: fmt.Sprintf(format, a...)}
 }
 
-// OwnerAPI interface
-type OwnerAPI interface {
-	Projects() ProjectAPI
+// TogglyAPI interface
+type TogglyAPI interface {
+	Projects(owner string) ProjectAPI
+	Environments(owner, project string) EnvironmentAPI
+	Groups(owner, project, env string) GroupAPI
 }
 
 // ProjectInfo type
@@ -47,12 +54,6 @@ type ProjectAPI interface {
 	Create(info *ProjectInfo) (*domain.Project, error)
 	Update(info *ProjectInfo) (*domain.Project, error)
 	Delete(code string) error
-	For(code string) ForProjectAPI
-}
-
-// ForProjectAPI interface
-type ForProjectAPI interface {
-	Environments() EnvironmentAPI
 }
 
 // EnvironmentInfo type
@@ -65,13 +66,7 @@ type EnvironmentAPI interface {
 	Create(info *EnvironmentInfo) (*domain.Environment, error)
 	Update(info *EnvironmentInfo) (*domain.Environment, error)
 	Delete(code string) error
-	For(code string) ForEnvironmentAPI
-}
-
-// ForEnvironmentAPI interface
-type ForEnvironmentAPI interface {
-	Groups() GroupAPI
-	Parameters() ParameterAPI
+	Parameters(env string) ParameterAPI
 }
 
 // GroupInfo type
@@ -80,14 +75,11 @@ type GroupInfo struct{}
 // GroupAPI interface
 type GroupAPI interface {
 	List() ([]*domain.Group, error)
-	Get(code string) (domain.Group, error)
-	Create(code string) (domain.Group, error)
-	For(code string) ForGroupAPI
-}
-
-// ForGroupAPI interface
-type ForGroupAPI interface {
-	Parameters() ParameterAPI
+	Get(code string) (*domain.Group, error)
+	Create(info GroupInfo) (*domain.Group, error)
+	Update(info GroupInfo) (*domain.Group, error)
+	Delete(code string) error
+	Parameters(group string) ParameterAPI
 }
 
 // ParameterInfo type
@@ -98,7 +90,7 @@ type ParameterAPI interface {
 	List() ([]*domain.Parameter, error)
 	Get(code string) (*domain.Parameter, error)
 	GetBatch(code ...string) ([]*domain.Parameter, error)
-	Create(param *ParameterInfo) (domain.Parameter, error)
-	Update(param *ParameterInfo) (domain.Parameter, error)
+	Create(param *ParameterInfo) (*domain.Parameter, error)
+	Update(param *ParameterInfo) (*domain.Parameter, error)
 	Delete(code string) error
 }
