@@ -7,11 +7,12 @@ import (
 
 // Environment type
 type Environment struct {
-	Code      string    `json:"code"`
-	Owner     string    `json:"owner"`
-	Project   string    `json:"project"`
-	Protected bool      `json:"protected"`
-	RegDate   time.Time `json:"reg_date" bson:"reg_date"`
+	Code        string    `json:"code"`
+	Owner       string    `json:"owner"`
+	Project     string    `json:"project"`
+	Description string    `json:"description"`
+	Protected   bool      `json:"protected"`
+	RegDate     time.Time `json:"reg_date" bson:"reg_date"`
 }
 
 // Key returns full environment key

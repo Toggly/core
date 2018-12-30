@@ -115,9 +115,19 @@ func (s *mongoEnvironmentStorage) Save(env *domain.Environment) error {
 	}
 
 	res, err := s.collection().InsertOne(ctxT, env)
-	// TODO: check unique index error
-	s.log.Debug().Str("id", fmt.Sprintf("%v", res.InsertedID)).Msg("Environment inserted")
-	return err
+	if err != nil {
+		s.log.Error().Err(err).Msg("Can't insert environment")
+		if e, ok := err.(mongo.WriteErrors); ok && len(e) > 0 {
+			switch e[0].Code {
+			case 11000:
+				return &storage.ErrUniqueIndex{Type: "environment", Key: env.Key()}
+			}
+		}
+		return err
+	}
+
+	s.log.Debug().Str("id", fmt.Sprintf("%v %v", res, err)).Msg("Environment inserted")
+	return nil
 }
 
 func (s *mongoEnvironmentStorage) Update(env *domain.Environment) error {
@@ -132,6 +142,14 @@ func (s *mongoEnvironmentStorage) Update(env *domain.Environment) error {
 	}
 
 	res := s.collection().FindOneAndReplace(ctxT, bson.M{"owner": s.owner, "project": s.project, "code": env.Code}, env)
-	// TODO: check not found error
+	var e domain.Environment
+	err := res.Decode(&e)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return storage.ErrNotFound
+		}
+		s.log.Error().Err(err).Msg("Can't decode environment")
+		return err
+	}
 	return res.Err()
 }

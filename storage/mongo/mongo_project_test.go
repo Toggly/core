@@ -34,9 +34,9 @@ func TestMongoProject(t *testing.T) {
 
 	t.Run("create", func(t *testing.T) {
 		p := &domain.Project{
+			Owner:       "ow1",
 			Code:        "proj1",
 			Description: "Description 1",
-			Owner:       "ow1",
 			Status:      domain.ProjectStatusActive,
 			RegDate:     util.Now(),
 		}
@@ -45,10 +45,10 @@ func TestMongoProject(t *testing.T) {
 			p.Owner = "ow2"
 			err = db.Save(p)
 			assert.Equal(storage.ErrEntityRelationsBroken, err)
+			p.Owner = "ow1"
 		})
 
 		t.Run("ok", func(t *testing.T) {
-			p.Owner = "ow1"
 			err = db.Save(p)
 			assert.Nil(err)
 
