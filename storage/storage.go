@@ -29,7 +29,8 @@ type DataStorage interface {
 	Connect() error
 	Projects(owner string) ProjectStorage
 	Environments(owner, project string) EnvironmentStorage
-	// Groups(owner, project, env string) GroupStorage
+	Groups(owner, project, env string) GroupStorage
+	Parameters(owner, project, env, group string) ParameterStorage
 }
 
 // ProjectStorage defines projects storage interface
@@ -41,11 +42,30 @@ type ProjectStorage interface {
 	Update(project *domain.Project) error
 }
 
-// EnvironmentStorage defines projects storage interface
+// EnvironmentStorage defines environments storage interface
 type EnvironmentStorage interface {
 	List() ([]*domain.Environment, error)
 	Get(code string) (*domain.Environment, error)
 	Delete(code string) error
 	Save(env *domain.Environment) error
 	Update(env *domain.Environment) error
+}
+
+// GroupStorage defines groups storage interface
+type GroupStorage interface {
+	List() ([]*domain.Group, error)
+	Get(code string) (*domain.Group, error)
+	Delete(code string) error
+	Save(grp *domain.Group) error
+	Update(grp *domain.Group) error
+}
+
+// ParameterStorage defines groups storage interface
+type ParameterStorage interface {
+	List() ([]*domain.Parameter, error)
+	Get(code string) (*domain.Parameter, error)
+	GetBatch(code ...string) ([]*domain.Parameter, error)
+	Delete(code string) error
+	Save(grp *domain.Parameter) error
+	Update(grp *domain.Parameter) error
 }

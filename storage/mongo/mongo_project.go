@@ -2,8 +2,6 @@ package mongo
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/Toggly/core/domain"
@@ -25,23 +23,34 @@ func (s *mongoProjectStorage) collection() *mongo.Collection {
 	return s.db.Collection("project")
 }
 
-func (s *mongoProjectStorage) List() ([]*domain.Project, error) {
+func (s *mongoProjectStorage) filter(code string) bson.M {
+	f := bson.M{
+		"owner": s.owner,
+	}
+	if code != "" {
+		f["code"] = code
+	}
+	return f
+}
+
+func (s *mongoProjectStorage) List() (list []*domain.Project, err error) {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-	cur, err := s.collection().Find(ctxT, bson.M{"owner": s.owner})
+	cur, err := s.collection().Find(ctxT, s.filter(""))
 	if err != nil {
 		s.log.Error().Err(err).Msg("DB error")
 		return nil, err
 	}
 	defer cur.Close(ctxT)
-	list := make([]*domain.Project, 0)
+	list = []*domain.Project{}
 	for cur.Next(s.ctx) {
-		var item domain.Project
-		err := cur.Decode(&item)
+		item := &domain.Project{}
+		err := cur.Decode(item)
 		if err != nil {
-			log.Fatal(err)
+			s.log.Error().Err(err).Msg("Can't decode project object")
+			return nil, err
 		}
-		list = append(list, &item)
+		list = append(list, item)
 	}
 	if err := cur.Err(); err != nil {
 		return nil, err
@@ -52,7 +61,7 @@ func (s *mongoProjectStorage) List() ([]*domain.Project, error) {
 func (s *mongoProjectStorage) Get(code string) (project *domain.Project, err error) {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-	err = s.collection().FindOne(ctxT, bson.M{"owner": s.owner, "code": code}).Decode(&project)
+	err = s.collection().FindOne(ctxT, s.filter(code)).Decode(&project)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
@@ -67,9 +76,11 @@ func (s *mongoProjectStorage) Get(code string) (project *domain.Project, err err
 func (s *mongoProjectStorage) Delete(code string) error {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-	res, err := s.collection().DeleteOne(ctxT, bson.M{"owner": s.owner, "code": code})
-	s.log.Debug().Int64("count", res.DeletedCount).Msg("Project deleted")
-	return err
+	if _, err := s.collection().DeleteOne(ctxT, s.filter(code)); err != nil {
+		s.log.Error().Err(err).Msg("Can't delete project")
+		return err
+	}
+	return nil
 }
 
 func (s *mongoProjectStorage) ensureIndex(ctxT context.Context) error {
@@ -80,12 +91,10 @@ func (s *mongoProjectStorage) ensureIndex(ctxT context.Context) error {
 		},
 		Options: []bsonx.Elem{bsonx.Elem{Key: "unique", Value: bsonx.Boolean(true)}},
 	}
-	name, err := s.collection().Indexes().CreateOne(ctxT, idx)
-	if err != nil {
+	if _, err := s.collection().Indexes().CreateOne(ctxT, idx); err != nil {
 		s.log.Error().Err(err).Msg("Can't create index")
 		return err
 	}
-	s.log.Debug().Str("name", name).Msg("Index created")
 	return nil
 }
 
@@ -101,16 +110,12 @@ func (s *mongoProjectStorage) Save(project *domain.Project) error {
 	if err := s.checkRelations(project); err != nil {
 		return err
 	}
-
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-
 	if err := s.ensureIndex(ctxT); err != nil {
 		return err
 	}
-
-	res, err := s.collection().InsertOne(ctxT, project)
-	if err != nil {
+	if _, err := s.collection().InsertOne(ctxT, project); err != nil {
 		s.log.Error().Err(err).Msg("Can't insert project")
 		if e, ok := err.(mongo.WriteErrors); ok && len(e) > 0 {
 			switch e[0].Code {
@@ -120,8 +125,6 @@ func (s *mongoProjectStorage) Save(project *domain.Project) error {
 		}
 		return err
 	}
-
-	s.log.Debug().Str("id", fmt.Sprintf("%v %v", res, err)).Msg("Project inserted")
 	return nil
 }
 
@@ -129,23 +132,17 @@ func (s *mongoProjectStorage) Update(project *domain.Project) error {
 	if err := s.checkRelations(project); err != nil {
 		return err
 	}
-
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-
 	if err := s.ensureIndex(ctxT); err != nil {
 		return nil
 	}
-
-	res := s.collection().FindOneAndReplace(ctxT, bson.M{"owner": s.owner, "code": project.Code}, project)
-	var proj domain.Project
-	err := res.Decode(&proj)
-	if err != nil {
+	if err := s.collection().FindOneAndReplace(ctxT, s.filter(project.Code), project).Decode(&domain.Project{}); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return storage.ErrNotFound
 		}
-		s.log.Error().Err(err).Msg("Can't decode project")
+		s.log.Error().Err(err).Msg("Can't update project")
 		return err
 	}
-	return res.Err()
+	return nil
 }

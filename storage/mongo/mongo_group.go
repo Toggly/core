@@ -12,22 +12,24 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type mongoEnvironmentStorage struct {
+type mongoGroupStorage struct {
 	log     zerolog.Logger
 	owner   string
+	env     string
 	project string
 	ctx     context.Context
 	db      *mongo.Database
 }
 
-func (s *mongoEnvironmentStorage) collection() *mongo.Collection {
-	return s.db.Collection("env")
+func (s *mongoGroupStorage) collection() *mongo.Collection {
+	return s.db.Collection("grp")
 }
 
-func (s *mongoEnvironmentStorage) filter(code string) bson.M {
+func (s *mongoGroupStorage) filter(code string) bson.M {
 	f := bson.M{
-		"owner":   s.owner,
-		"project": s.project,
+		"owner":       s.owner,
+		"project":     s.project,
+		"environment": s.env,
 	}
 	if code != "" {
 		f["code"] = code
@@ -35,7 +37,7 @@ func (s *mongoEnvironmentStorage) filter(code string) bson.M {
 	return f
 }
 
-func (s *mongoEnvironmentStorage) List() (list []*domain.Environment, err error) {
+func (s *mongoGroupStorage) List() (list []*domain.Group, err error) {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
 	cur, err := s.collection().Find(ctxT, s.filter(""))
@@ -44,12 +46,12 @@ func (s *mongoEnvironmentStorage) List() (list []*domain.Environment, err error)
 		return nil, err
 	}
 	defer cur.Close(ctxT)
-	list = []*domain.Environment{}
+	list = []*domain.Group{}
 	for cur.Next(s.ctx) {
-		item := &domain.Environment{}
+		item := &domain.Group{}
 		err := cur.Decode(item)
 		if err != nil {
-			s.log.Error().Err(err).Msg("Can't decode environment object")
+			s.log.Error().Err(err).Msg("Can't decode group object")
 			return nil, err
 		}
 		list = append(list, item)
@@ -60,10 +62,10 @@ func (s *mongoEnvironmentStorage) List() (list []*domain.Environment, err error)
 	return list, nil
 }
 
-func (s *mongoEnvironmentStorage) Get(code string) (env *domain.Environment, err error) {
+func (s *mongoGroupStorage) Get(code string) (grp *domain.Group, err error) {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
-	err = s.collection().FindOne(ctxT, s.filter(code)).Decode(&env)
+	err = s.collection().FindOne(ctxT, s.filter(code)).Decode(&grp)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
@@ -72,24 +74,25 @@ func (s *mongoEnvironmentStorage) Get(code string) (env *domain.Environment, err
 			return nil, err
 		}
 	}
-	return env, nil
+	return grp, nil
 }
 
-func (s *mongoEnvironmentStorage) Delete(code string) error {
+func (s *mongoGroupStorage) Delete(code string) error {
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
 	if _, err := s.collection().DeleteOne(ctxT, s.filter(code)); err != nil {
-		s.log.Error().Err(err).Msg("Can't delete environment")
+		s.log.Error().Err(err).Msg("Can't delete group")
 		return err
 	}
 	return nil
 }
 
-func (s *mongoEnvironmentStorage) ensureIndex(ctxT context.Context) error {
+func (s *mongoGroupStorage) ensureIndex(ctxT context.Context) error {
 	idx := mongo.IndexModel{
 		Keys: []bsonx.Elem{
 			bsonx.Elem{Key: "owner", Value: bsonx.Int32(1)},
 			bsonx.Elem{Key: "project", Value: bsonx.Int32(1)},
+			bsonx.Elem{Key: "environment", Value: bsonx.Int32(1)},
 			bsonx.Elem{Key: "code", Value: bsonx.Int32(1)},
 		},
 		Options: []bsonx.Elem{bsonx.Elem{Key: "unique", Value: bsonx.Boolean(true)}},
@@ -101,20 +104,24 @@ func (s *mongoEnvironmentStorage) ensureIndex(ctxT context.Context) error {
 	return nil
 }
 
-func (s *mongoEnvironmentStorage) checkRelations(env *domain.Environment) error {
-	if s.owner != env.Owner {
-		s.log.Error().Msgf("Wrong owner. Expected: %s, got: %s", s.owner, env.Owner)
+func (s *mongoGroupStorage) checkRelations(grp *domain.Group) error {
+	if s.owner != grp.Owner {
+		s.log.Error().Msgf("Wrong owner. Expected: %s, got: %s", s.owner, grp.Owner)
 		return storage.ErrEntityRelationsBroken
 	}
-	if s.project != env.Project {
-		s.log.Error().Msgf("Wrong project. Expected: %s, got: %s", s.project, env.Project)
+	if s.project != grp.Project {
+		s.log.Error().Msgf("Wrong project. Expected: %s, got: %s", s.project, grp.Project)
+		return storage.ErrEntityRelationsBroken
+	}
+	if s.env != grp.Environment {
+		s.log.Error().Msgf("Wrong environment. Expected: %s, got: %s", s.env, grp.Environment)
 		return storage.ErrEntityRelationsBroken
 	}
 	return nil
 }
 
-func (s *mongoEnvironmentStorage) Save(env *domain.Environment) error {
-	if err := s.checkRelations(env); err != nil {
+func (s *mongoGroupStorage) Save(grp *domain.Group) error {
+	if err := s.checkRelations(grp); err != nil {
 		return err
 	}
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
@@ -122,12 +129,12 @@ func (s *mongoEnvironmentStorage) Save(env *domain.Environment) error {
 	if err := s.ensureIndex(ctxT); err != nil {
 		return nil
 	}
-	if _, err := s.collection().InsertOne(ctxT, env); err != nil {
-		s.log.Error().Err(err).Msg("Can't insert environment")
+	if _, err := s.collection().InsertOne(ctxT, grp); err != nil {
+		s.log.Error().Err(err).Msg("Can't insert group")
 		if e, ok := err.(mongo.WriteErrors); ok && len(e) > 0 {
 			switch e[0].Code {
 			case 11000:
-				return &storage.ErrUniqueIndex{Type: "environment", Key: env.Key()}
+				return &storage.ErrUniqueIndex{Type: "group", Key: grp.Key()}
 			}
 		}
 		return err
@@ -135,8 +142,8 @@ func (s *mongoEnvironmentStorage) Save(env *domain.Environment) error {
 	return nil
 }
 
-func (s *mongoEnvironmentStorage) Update(env *domain.Environment) error {
-	if err := s.checkRelations(env); err != nil {
+func (s *mongoGroupStorage) Update(grp *domain.Group) error {
+	if err := s.checkRelations(grp); err != nil {
 		return err
 	}
 	ctxT, cancel := context.WithTimeout(s.ctx, 3*time.Second)
@@ -144,11 +151,11 @@ func (s *mongoEnvironmentStorage) Update(env *domain.Environment) error {
 	if err := s.ensureIndex(ctxT); err != nil {
 		return nil
 	}
-	if err := s.collection().FindOneAndReplace(ctxT, s.filter(env.Code), env).Decode(&domain.Environment{}); err != nil {
+	if err := s.collection().FindOneAndReplace(ctxT, s.filter(grp.Code), grp).Decode(&domain.Group{}); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return storage.ErrNotFound
 		}
-		s.log.Error().Err(err).Msg("Can't update environment")
+		s.log.Error().Err(err).Msg("Can't update group")
 		return err
 	}
 	return nil

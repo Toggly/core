@@ -61,3 +61,26 @@ func (s *mongoStorage) Environments(owner, project string) storage.EnvironmentSt
 		db:      s.db,
 	}
 }
+
+func (s *mongoStorage) Groups(owner, project string, env string) storage.GroupStorage {
+	return &mongoGroupStorage{
+		log:     s.log,
+		owner:   owner,
+		project: project,
+		env:     env,
+		ctx:     s.ctx,
+		db:      s.db,
+	}
+}
+
+func (s *mongoStorage) Parameters(owner, project string, env, group string) storage.ParameterStorage {
+	return &mongoParameterStorage{
+		log:     s.log,
+		owner:   owner,
+		project: project,
+		env:     env,
+		group:   group,
+		ctx:     s.ctx,
+		db:      s.db,
+	}
+}
